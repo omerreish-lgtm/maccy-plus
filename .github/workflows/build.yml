@@ -1,0 +1,53 @@
+name: Build Maccy Plus
+
+on:
+  push:
+    branches: [multi-paste]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      SIGNING: >-
+        CODE_SIGN_STYLE=Manual
+        CODE_SIGN_IDENTITY=-
+        DEVELOPMENT_TEAM=
+        PROVISIONING_PROFILE_SPECIFIER=
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Test paste-all planner
+        run: |
+          xcodebuild test \
+            -project Maccy.xcodeproj -scheme Maccy \
+            -destination 'platform=macOS' \
+            -only-testing:MaccyTests/PasteAllPlannerTests \
+            -skipPackagePluginValidation -skipMacroValidation \
+            $SIGNING
+
+      - name: Build release app
+        run: |
+          xcodebuild build \
+            -project Maccy.xcodeproj -scheme Maccy \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build \
+            -skipPackagePluginValidation -skipMacroValidation \
+            $SIGNING
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          cp -R build/Build/Products/Release/Maccy.app "dist/Maccy Plus.app"
+          codesign --verify --deep --strict "dist/Maccy Plus.app"
+          ditto -c -k --keepParent "dist/Maccy Plus.app" "dist/Maccy-Plus.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Maccy-Plus
+          path: dist/Maccy-Plus.zip

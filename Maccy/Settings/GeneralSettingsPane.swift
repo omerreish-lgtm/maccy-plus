@@ -15,21 +15,16 @@ struct GeneralSettingsPane: View {
   @State private var pasteModifier = HistoryItemAction.paste.modifierFlags.description
   @State private var pasteWithoutFormatting = HistoryItemAction.pasteWithoutFormatting.modifierFlags.description
 
-  @State private var updater = SoftwareUpdater()
+  @Default(.multiPasteMode) private var multiPasteMode
 
+  // Maccy Plus is a fork: Sparkle updates are disabled so upstream releases
+  // never replace it. SoftwareUpdater is intentionally not instantiated.
   var body: some View {
     Settings.Container(contentWidth: 450) {
       Settings.Section(title: "", bottomDivider: true) {
         LaunchAtLogin.Toggle {
           Text("LaunchAtLogin", tableName: "GeneralSettings")
         }
-        Toggle(isOn: $updater.automaticallyChecksForUpdates) {
-          Text("CheckForUpdates", tableName: "GeneralSettings")
-        }
-        Button(
-          action: { updater.checkForUpdates() },
-          label: { Text("CheckNow", tableName: "GeneralSettings") }
-        )
       }
 
       Settings.Section(label: { Text("Open", tableName: "GeneralSettings") }) {
@@ -103,6 +98,20 @@ struct GeneralSettingsPane: View {
         .fixedSize(horizontal: false, vertical: true)
         .foregroundStyle(.gray)
         .controlSize(.small)
+      }
+
+      Settings.Section(
+        bottomDivider: true,
+        label: { Text("Paste multiple") }
+      ) {
+        Picker("", selection: $multiPasteMode) {
+          ForEach(MultiPasteMode.allCases) { mode in
+            Text(mode.description)
+          }
+        }
+        .labelsHidden()
+        .accessibilityLabel(Text("Paste multiple"))
+        .frame(width: 180, alignment: .leading)
       }
 
       Settings.Section(title: "") {

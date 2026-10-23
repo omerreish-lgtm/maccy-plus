@@ -81,6 +81,15 @@ class Clipboard {
     checkForChangesInPasteboard()
   }
 
+  // Puts a string on the pasteboard without recording it in history:
+  // the transient type makes checkForChangesInPasteboard() ignore it.
+  func copyTransient(_ string: String) {
+    pasteboard.clearContents()
+    pasteboard.setString(string, forType: .string)
+    pasteboard.setString("", forType: .transient)
+    sync()
+  }
+
   @MainActor
   func copy(_ item: HistoryItem?, removeFormatting: Bool = false) {
     guard let item else { return }

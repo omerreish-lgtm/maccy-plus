@@ -417,6 +417,45 @@ class History: ItemsContainer { // swiftlint:disable:this type_body_length
     }
   }
 
+  @MainActor
+  func pasteAll(selection: Selection<HistoryItemDecorator>, flags modifierFlags: NSEvent.ModifierFlags) {
+    guard AppState.shared.multiSelectionEnabled else { return }
+
+    let chunks = PasteAllPlanner.chunks(for: selection.items.map(\.item)) { item in
+      item.imageData == nil && item.fileURLs.isEmpty ? item.text : nil
+    }
+    guard !chunks.isEmpty else { return }
+
+    let removeFormatting = modifierFlags.isEmpty
+      ? Defaults[.removeFormattingByDefault]
+      : HistoryItemAction(modifierFlags) == .pasteWithoutFormatting
+
+    logger.info("Pasting \(selection.items.count) items at once in \(chunks.count) pastes")
+    AppState.shared.popup.close()
+
+    Task { @MainActor in
+      for (index, chunk) in chunks.enumerated() {
+        // Give the target app time to read the previous paste
+        // before the pasteboard is overwritten with the next one.
+        if index > 0 {
+          try? await Task.sleep(for: .milliseconds(300))
+        }
+
+        switch chunk {
+        case .text(let string):
+          Clipboard.shared.copyTransient(string)
+        case .item(let item):
+          Clipboard.shared.copy(item, removeFormatting: removeFormatting)
+        }
+        Clipboard.shared.paste()
+      }
+    }
+
+    Task {
+      searchQuery = ""
+    }
+  }
+
   func handlePasteStack() {
     guard let stack = pasteStack else {
       return
