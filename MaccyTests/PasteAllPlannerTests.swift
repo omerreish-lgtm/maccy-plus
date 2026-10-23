@@ -1,6 +1,7 @@
 import XCTest
 @testable import Maccy
 
+@MainActor
 class PasteAllPlannerTests: XCTestCase {
   // Strings stand for text items; nil stands for an image.
   private func plan(_ items: [String?]) -> [String] {
